@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SignIn</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/header_and_background.css' %}">
+    <link rel="stylesheet" href="{% static 'users/user_auths.css' %}">
+</head>
+<body>
+    <header>
+        <div class="box">
+            <h3 class="header-title">Take notes</h3>
+            <a href="/users/signup/">
+                <button class="round-box cursor-pointer button">
+                    Sign Up
+                </button>
+            </a>
+        </div>
+    </header>
+    <form id="login_form" action="/users/signin/" method="post">
+        <div>
+            Sign In
+        </div>
+        {% csrf_token %}
+        <div class="login_form_field">
+            <label for="{{ form.username.id_for_label }}">Username:</label>
+            {{ form.username }}
+        </div>
+        <div class="login_form_field">
+            <label for="{{ form.password.id_for_label }}">Password:</label>
+            {{ form.password }}
+        </div>
+        <input class="round-box cursor-pointer button" type="submit" value="Sign In">
+    </form>
+</body>
+</html>

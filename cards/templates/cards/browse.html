@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Browse User Notes</title>
+    <meta name="description" content="List of your added notes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/header_and_background.css' %}">
+    <link rel="stylesheet" href="{% static 'cards/browse.css' %}">
+</head>
+<body>
+    <div class="modal-background">
+        <div class="modal-foreground">
+            <div class="header">
+                <span>Create new note</span>
+                <span class="close cursor-pointer">&times;</span>
+            </div>
+            <div class="content">
+                <form id="new-card-form" action="/cards/" method="post">
+                    {% csrf_token %}
+                    <div>
+                        <label for="{{ form.title.id_for_label }}">Title:&nbsp;</label>
+                        <span class="form-input">{{ form.title }}</span>
+                    </div>
+                    <div>
+                        <label for="{{  form.description.id_for_label }}">Description:</label>
+                        <br/>
+                        <span class="form-input">{{ form.description }}</span>
+                    </div>
+                    <br/>
+                    <input class="form-input round-box cursor-pointer button" type="submit" value="Add Note"/>
+                </form>
+            </div>
+        </div>
+    </div>
+    <main>
+        <header>
+            <div class="box">
+                <h3 class="header-title">Take notes</h3>
+                <div>
+                    <button id="new-note-button" class="">
+                        Create new note
+                    </button>
+                    <form action="/users/logout/" method="post">
+                        {% csrf_token %}
+                        <input type="submit" id="logout-button" class="round-box cursor-pointer button" value="Logout">
+                            
+                        <!-- </button> -->
+                    </form>
+                </div>
+            </div>
+        </header>
+
+        <!-- <div class="main-body"> -->
+            {% for card in cards %}
+                <section class="card box round-box">
+                    <div class="card-data">
+                        <b><div class="title">{{ card.title }}</div></b>
+                        <div class="description">{{ card.description }}</div>
+                        <div class=""><span class="label">Created:</span> {{ card.date_created }}</div>
+                    </div>
+                    <div class="card-metadata">
+                        <div class="mark-done cursor-pointer">Mark as done</div>
+                        <input type="hidden" name="card-id" value="{{ card.id }}">
+                    </div>
+                </section>
+            {% endfor %}
+        <!-- </div> -->
+    </main>
+    <div id="checked-banner" class="box round-box cursor-pointer">
+        <span>Marked card as done.</span>
+        <span id="undo">Undo</span>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(() => {
+            let modalDisplayed = false;
+            let bodyOverflow = $("body").css("overflow");
+            function triggerModal(display) {
+                if (typeof display !== typeof true) {
+                    display = !modalDisplayed;
+                }
+                if (display) {
+                    $(".modal-background").css("display", "block");
+                    $("body").css("position", "hidden");
+                }else {
+                    $(".modal-background").css("display", "none");
+                    $("body").css("overflow", "initial");
+                }
+                modalDisplayed = display;
+            }
+
+            $("#new-note-button").click((e) => {
+                triggerModal();
+                e.stopPropagation();
+            });
+
+            $(".modal-background .close").click(
+                () => triggerModal(false)
+            );
+
+            $(document).click((e) => {
+                let target = $(e.target);
+                if (target.closest(".modal-foreground").length == 0) {
+                    triggerModal(false);
+                }
+            });
+
+            let form = $('#new-card-form');
+            form.submit(() => {
+                let title = form.find('input[type="text"]')[0];
+                let description = form.find('textarea')[0];
+
+                if (title.value == '') {
+                    return false;
+                }
+            });
+
+            const cookies = document.cookie;
+            const csrftoken = cookies.split("csrftoken=")[1];
+            function commitMark(cardId) {
+                console.log(cardId)
+                $.ajax({
+                    url: '/cards/check/',
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                    },
+                    data: {card_id: cardId},
+                    success: function(data) {
+                        console.log(data);
+                    }
+                })
+            }
+            let lastBannerTimeout;
+            let cardToBeRemoved;
+            $(".card .mark-done.cursor-pointer").click(function (e){
+
+                $("#checked-banner").css("display", "block");
+                // if statement runs when callback in timeout below has not run yet
+                // then clear previous timeout and commit marking the previous removed card
+                if (lastBannerTimeout !== undefined) {
+                    clearTimeout(lastBannerTimeout);
+                    commitMark(cardToBeRemoved.find("input")[0].value);
+                }
+                cardToBeRemoved = $(this).parent().parent();
+                cardToBeRemoved.css("display", "none");
+                // setting lastBannerTimeout to undefined prevents prev. if statement to run when func. runs again
+                lastBannerTimeout = setTimeout(() => {
+                    $("#checked-banner").css("display", "none");
+                    lastBannerTimeout = undefined;
+                    commitMark(cardToBeRemoved.find("input")[0].value);
+                }, 5000);
+            });
+
+            $("#checked-banner").click(() => {
+                if (lastBannerTimeout !== undefined) {
+                    // #checked-banner is still displayed
+                    // prevent both timeout and if statement before that from running when that func. runs again
+                    clearTimeout(lastBannerTimeout);
+                    cardToBeRemoved.css("display", "flex");
+                    lastBannerTimeout = undefined;
+                    cardToBeRemoved = undefined;
+                    $("#checked-banner").css("display", "none");
+                }
+            });
+        });
+    </script>
+</body>
+</html>
